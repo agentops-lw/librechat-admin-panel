@@ -1,5 +1,5 @@
-import { join } from 'node:path';
 import { Glob } from 'bun';
+import { join } from 'node:path';
 
 const CLIENT_DIR = join(import.meta.dir, 'dist', 'client');
 const SERVER_ENTRY = new URL('./dist/server/server.js', import.meta.url);
