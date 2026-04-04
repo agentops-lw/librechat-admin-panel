@@ -1,5 +1,6 @@
 import { Select } from '@clickhouse/click-ui';
-import { useRef, useCallback, useLayoutEffect } from 'react';
+import TextareaAutosize from 'react-textarea-autosize';
+import { useRef, useLayoutEffect } from 'react';
 import type * as t from '@/types';
 import { AddItemButton, TrashButton } from '@/components/shared';
 import { useLocalize } from '@/hooks';
@@ -11,45 +12,6 @@ const TYPE_LABELS: Record<t.KVValueType, string> = {
   boolean: 'T/F',
   json: '{ }',
 };
-
-function AutoResizeTextarea({
-  value,
-  onChange,
-  placeholder,
-  disabled,
-  'aria-label': ariaLabel,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  'aria-label'?: string;
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  const resize = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = '0';
-    el.style.height = `${el.scrollHeight}px`;
-  }, []);
-
-  useLayoutEffect(resize, [value, resize]);
-
-  return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onFocus={resize}
-      placeholder={placeholder}
-      disabled={disabled}
-      aria-label={ariaLabel}
-      rows={1}
-      className="config-input w-full resize-none overflow-hidden font-mono text-xs"
-    />
-  );
-}
 
 export function KeyValueField({
   id,
@@ -191,12 +153,14 @@ export function KeyValueField({
           />
         )}
       </div>
-      <AutoResizeTextarea
+      <TextareaAutosize
         value={pair.value}
-        onChange={(v) => handleChange(index, 'value', v)}
+        onChange={(e) => handleChange(index, 'value', e.target.value)}
         placeholder='{"key": "value"}'
         disabled={disabled}
         aria-label={`${localize('com_ui_value')} ${index + 1}`}
+        minRows={1}
+        className="config-input w-full resize-none font-mono text-xs"
       />
     </div>
   );

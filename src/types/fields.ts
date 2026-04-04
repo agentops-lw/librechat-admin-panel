@@ -100,6 +100,9 @@ export interface ArrayObjectFieldProps {
   value: ConfigValue;
   fields: SchemaField[];
   onChange: (value: ConfigValue) => void;
+  /** Per-entry change callback. When provided, individual entry edits use
+   *  this instead of replacing the entire array via `onChange`. */
+  onEntryChange?: (index: number, value: ConfigValue) => void;
   disabled?: boolean;
   /** Hide the bottom "Add entry" button (e.g. when add is in the section header). */
   hideAddButton?: boolean;

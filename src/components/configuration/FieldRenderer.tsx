@@ -1,5 +1,5 @@
 import { Icon } from '@clickhouse/click-ui';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type * as t from '@/types';
 import {
@@ -66,12 +66,18 @@ function ArrayObjectNestedGroup({
   const addTriggerRef = useRef<(() => void) | null>(null);
   const handleAdd = disabled ? undefined : () => addTriggerRef.current?.();
 
+  const handleEntryChange = useCallback(
+    (index: number, value: t.ConfigValue) => onChange(`${path}.${index}`, value),
+    [onChange, path],
+  );
+
   const arrayField = (
     <ArrayObjectField
       id={fieldId}
       value={currentValue}
       fields={field.children ?? []}
       onChange={(v) => onChange(path, v)}
+      onEntryChange={handleEntryChange}
       disabled={disabled}
       hideAddButton
       addTriggerRef={addTriggerRef}
@@ -1068,16 +1074,13 @@ export function renderInlineField(
   }
 
   if (controlType === 'record') {
-    const pairs: { key: string; value: string }[] = Array.isArray(fieldValue)
-      ? (fieldValue as { key: string; value: string }[])
+    const pairs: t.KeyValuePair[] = Array.isArray(fieldValue)
+      ? (fieldValue as t.KeyValuePair[])
       : Object.entries(
           typeof fieldValue === 'object' && fieldValue !== null
             ? (fieldValue as Record<string, t.ConfigValue>)
             : {},
-        ).map(([k, v]) => ({
-          key: k,
-          value: typeof v === 'string' ? v : JSON.stringify(v),
-        }));
+        ).map(([k, v]) => toKVPair(k, v));
     return (
       <InlineRow key={field.key} label={fieldLabel} fieldId={fieldId} required={required}>
         <KeyValueField

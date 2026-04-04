@@ -19,6 +19,22 @@ export function serializeKVPairs(value: t.ConfigValue): t.ConfigValue {
   return record;
 }
 
+/** Recursively serialize KV pairs within an object tree. */
+export function deepSerializeKVPairs(value: t.ConfigValue): t.ConfigValue {
+  if (value == null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) {
+    const serialized = serializeKVPairs(value);
+    if (serialized !== value) return serialized;
+    return value.map(deepSerializeKVPairs);
+  }
+  const obj = value as Record<string, t.ConfigValue>;
+  const result: Record<string, t.ConfigValue> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    result[k] = deepSerializeKVPairs(v);
+  }
+  return result;
+}
+
 function coerceKVValue(raw: string, type: t.KVValueType): t.ConfigValue {
   if (type === 'boolean') return raw === 'true';
   if (type === 'number') {
