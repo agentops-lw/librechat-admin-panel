@@ -146,6 +146,7 @@ const clearSession = async (session: Awaited<ReturnType<typeof useAppSession>>) 
     user: undefined,
     refreshToken: undefined,
     tokenProvider: undefined,
+    expiresAt: undefined,
     lastVerified: undefined,
     lastActivity: undefined,
   });
@@ -153,23 +154,52 @@ const clearSession = async (session: Awaited<ReturnType<typeof useAppSession>>) 
 
 /**
  * Attempt to refresh the JWT using the stored refresh token.
- * Returns the new token and refreshToken on success, or undefined on failure.
+ * Returns the new token, refreshToken, and expiresAt on success, or undefined on failure.
+ *
+ * For `openid` sessions, the cookie-based `/api/auth/refresh` controller can't
+ * be reached cross-origin (the refresh-token cookie doesn't ship). Use the
+ * dedicated `/api/admin/oauth/refresh` endpoint that accepts the refresh
+ * token in the body and returns the new tokenset.
  *
  * Note: concurrent callers sharing a rotating refresh token may race; the
  * current call pattern (single React Query with 60s interval) is sequential.
  */
-const refreshResponseSchema = z.object({ token: z.string() });
+const refreshResponseSchema = z.object({
+  token: z.string(),
+  refreshToken: z.string().optional(),
+  expiresAt: z.number().optional(),
+});
 
 async function refreshAdminToken(
   refreshToken: string,
   tokenProvider: t.SessionData['tokenProvider'],
-): Promise<{ token: string; refreshToken?: string } | undefined> {
+  userId: string | undefined,
+): Promise<{ token: string; refreshToken?: string; expiresAt?: number } | undefined> {
   try {
-    const cookieParts = [`refreshToken=${refreshToken}`];
     if (tokenProvider === 'openid') {
-      cookieParts.push('token_provider=openid');
+      if (!userId) {
+        console.warn('[refreshAdminToken] openid refresh requires user id; aborting');
+        return undefined;
+      }
+      const response = await fetch(`${getServerApiUrl()}/api/admin/oauth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken, user_id: userId }),
+      });
+
+      if (!response.ok) return undefined;
+
+      const parsed = refreshResponseSchema.safeParse(await response.json());
+      if (!parsed.success) return undefined;
+
+      return {
+        token: parsed.data.token,
+        refreshToken: parsed.data.refreshToken,
+        expiresAt: parsed.data.expiresAt,
+      };
     }
 
+    const cookieParts = [`refreshToken=${refreshToken}`];
     const response = await fetch(`${getServerApiUrl()}/api/auth/refresh`, {
       method: 'POST',
       headers: { Cookie: cookieParts.join('; ') },
@@ -227,11 +257,12 @@ export const verifyAdminTokenFn = createServerFn({ method: 'GET' }).handler(asyn
           }
           if (response.status === 401) {
             if (refreshToken) {
-              const refreshed = await refreshAdminToken(refreshToken, tokenProvider);
+              const refreshed = await refreshAdminToken(refreshToken, tokenProvider, user.id);
               if (refreshed) {
                 const refreshedSession = {
                   token: refreshed.token,
                   refreshToken: refreshed.refreshToken ?? refreshToken,
+                  expiresAt: refreshed.expiresAt,
                   lastVerified: now,
                   lastActivity: now,
                 };
@@ -422,6 +453,7 @@ export const oauthExchangeFn = createServerFn({ method: 'POST' })
         token: exchangeData.token,
         refreshToken: exchangeData.refreshToken ?? extractCookieValue(response, 'refreshToken'),
         tokenProvider: 'openid',
+        expiresAt: exchangeData.expiresAt,
         lastVerified: now,
         lastActivity: now,
         codeVerifier: undefined,
