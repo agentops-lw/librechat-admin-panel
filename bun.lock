@@ -6,7 +6,7 @@
       "name": "tanstack-start-app",
       "dependencies": {
         "@clickhouse/click-ui": "0.2.0-rc.4",
-        "@librechat/data-schemas": "^0.0.51",
+        "@librechat/data-schemas": "^0.0.52",
         "@tailwindcss/vite": "^4.1.18",
         "@tanstack/react-devtools": "0.10.0",
         "@tanstack/react-query": "5.95.2",
@@ -292,7 +292,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "3.1.2", "@jridgewell/sourcemap-codec": "1.5.5" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@librechat/data-schemas": ["@librechat/data-schemas@0.0.51", "", { "peerDependencies": { "jsonwebtoken": "^9.0.2", "klona": "^2.0.6", "librechat-data-provider": "*", "lodash": "^4.17.23", "meilisearch": "^0.38.0", "mongoose": "^8.23.1", "nanoid": "^3.3.7", "winston": "^3.17.0", "winston-daily-rotate-file": "^5.0.0" } }, "sha512-EBfuq2NitbxgnoJZMXvH8FARvDkte8vNTfE+QDqpnktbM0ftvRqh6wxXQcq2JL50ED8ApuSewoni6gLVCVBwkw=="],
+    "@librechat/data-schemas": ["@librechat/data-schemas@0.0.52", "", { "peerDependencies": { "jsonwebtoken": "^9.0.2", "klona": "^2.0.6", "librechat-data-provider": "*", "lodash": "^4.17.23", "meilisearch": "^0.38.0", "mongoose": "^8.23.1", "nanoid": "^3.3.7", "winston": "^3.17.0", "winston-daily-rotate-file": "^5.0.0" } }, "sha512-h1+cd0eBwr9CTqQdJACshsIqVv2+uNlkS2coJEFy9VMmikFOAmNqKa+7nSiIOs7r91RYPh/jO+zb/qC9yFmw4g=="],
 
     "@mongodb-js/saslprep": ["@mongodb-js/saslprep@1.4.6", "", { "dependencies": { "sparse-bitfield": "^3.0.3" } }, "sha512-y+x3H1xBZd38n10NZF/rEBlvDOOMQ6LKUTHqr8R9VkJ+mmQOYtJFxIlkkK8fZrtOiL6VixbOBWMbZGBdal3Z1g=="],
 
