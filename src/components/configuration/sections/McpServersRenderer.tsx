@@ -698,7 +698,8 @@ export function McpServersRenderer(props: t.FieldRendererProps) {
       for (let i = 0; i < leafEdits.length; i++) {
         const edit = leafEdits[i];
         if (edit.segments.length === 0) {
-          if (edit.value === undefined) {
+          /** `null` is the scope-mode tombstone shape; semantically equivalent to a delete from the view perspective. */
+          if (edit.value === undefined || edit.value === null) {
             seed = {};
             seedFromDelete = true;
           } else {
@@ -780,6 +781,11 @@ export function McpServersRenderer(props: t.FieldRendererProps) {
     localizeRef.current = localize;
   }, [localize]);
 
+  const scopeModeRef = useRef(scopeMode);
+  useEffect(() => {
+    scopeModeRef.current = scopeMode;
+  }, [scopeMode]);
+
   const handleCreate = useCallback(
     (serverName: string, entry: Record<string, t.ConfigValue>) => {
       if (serverName.includes('.')) {
@@ -837,9 +843,9 @@ export function McpServersRenderer(props: t.FieldRendererProps) {
           if (!seen.has(leafPath)) onChange(leafPath, undefined);
         }
       }
-      /** Entry-path delete is needed to make MongoDB's $unset collapse the subtree; per-leaf $unset alone leaves an empty parent that refetches as a phantom entry. */
+      /** In scope mode write `null` instead of `undefined`: undefined routes through the DELETE-field-path endpoint and silently no-ops for inherited entries that have no scope override, whereas `null` PATCHes a tombstone the merge layer recognizes as "hide this entry for this scope." Base mode keeps `undefined` so MongoDB's $unset can collapse the subtree. */
       if (!seen.has(entryPath)) {
-        onChange(entryPath, undefined);
+        onChange(entryPath, scopeModeRef.current ? null : undefined);
       }
     },
     [onChange, path],
@@ -900,8 +906,8 @@ export function McpServersRenderer(props: t.FieldRendererProps) {
         }
         onChange(`${oldPrefix}${segments.join('.')}`, undefined);
       }
-      /** See $unset note in handleRemove. */
-      onChange(`${path}.${oldKey}`, undefined);
+      /** See tombstone note in handleRemove for why scope mode writes null instead of undefined. */
+      onChange(`${path}.${oldKey}`, scopeModeRef.current ? null : undefined);
     },
     [onChange, path],
   );
@@ -912,18 +918,13 @@ export function McpServersRenderer(props: t.FieldRendererProps) {
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          disabled={disabled || scopeMode}
+          disabled={disabled}
           className="config-add-btn"
         >
           <Icon name="plus" size="sm" />
           <span>{localize('com_config_create_mcp_server')}</span>
         </button>
       </div>
-      {scopeMode && (
-        <p className="text-sm text-(--cui-color-text-muted)">
-          {localize('com_config_mcp_scope_structural_disabled')}
-        </p>
-      )}
       {entries.map(([key, entryValue]) => (
         <McpEntryRow
           key={key}
@@ -933,7 +934,6 @@ export function McpServersRenderer(props: t.FieldRendererProps) {
           path={path}
           disabled={disabled}
           isYamlSource={yamlSourceKeys.has(key)}
-          scopeMode={scopeMode}
           onChange={onChange}
           onRemove={handleRemove}
           onRename={handleRename}
@@ -972,7 +972,6 @@ const McpEntryRow = memo(function McpEntryRowImpl({
   path,
   disabled,
   isYamlSource,
-  scopeMode,
   onChange,
   onRemove,
   onRename,
@@ -984,7 +983,6 @@ const McpEntryRow = memo(function McpEntryRowImpl({
   path: string;
   disabled?: boolean;
   isYamlSource: boolean;
-  scopeMode?: boolean;
   onChange: (path: string, value: t.ConfigValue) => void;
   onRemove: (key: string) => void;
   onRename: (oldKey: string, newKey: string) => void;
@@ -1002,7 +1000,7 @@ const McpEntryRow = memo(function McpEntryRowImpl({
   const isDottedLegacy = entryKey.includes('.');
   const isReadOnly = !!disabled || isDottedLegacy;
   /** Scope mode can't tombstone an inherited entry through per-leaf saves alone, so rename/delete are unreachable until the backend grows tombstone support; field edits still produce per-leaf scope overrides as expected. */
-  const isLockedIdentity = isYamlSource || isDottedLegacy || !!scopeMode;
+  const isLockedIdentity = isYamlSource || isDottedLegacy;
   const lockedKeys = isYamlSource && !isDottedLegacy ? YAML_LOCKED_FIELDS : undefined;
 
   const entryOnChange = useCallback(
