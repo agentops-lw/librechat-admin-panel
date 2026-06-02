@@ -1,7 +1,6 @@
 export {
   ACTION_BADGE_STATE,
   ACTION_LABEL_KEY,
-  auditLogToCsv,
   capabilityLabel,
   formatTimestamp,
 } from './auditLogUtils';
