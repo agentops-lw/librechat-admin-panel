@@ -144,8 +144,41 @@ export function AuditLogTab() {
     setCurrentPage(1);
   }, [actionFilter, dateFrom, dateTo, targetTypeFilter]);
 
+  /**
+   * Single-line signature of the active filter set so the announcement effect
+   * can short-circuit when nothing about the filter actually changed. Without
+   * this, every pagination click (which toggles `isFetching`) would re-fire
+   * the same "X entries match" message to screen readers.
+   */
+  const filterSignature = useMemo(
+    () =>
+      JSON.stringify({
+        search: searchFilter.debouncedValue,
+        action: actionFilter,
+        dateFrom,
+        dateTo,
+        actorId: actorIdFilter.debouncedValue,
+        targetId: targetIdFilter.debouncedValue,
+        capability: capabilityFilter.debouncedValue,
+        targetType: targetTypeFilter,
+      }),
+    [
+      searchFilter.debouncedValue,
+      actionFilter,
+      dateFrom,
+      dateTo,
+      actorIdFilter.debouncedValue,
+      targetIdFilter.debouncedValue,
+      capabilityFilter.debouncedValue,
+      targetTypeFilter,
+    ],
+  );
+  const lastAnnouncedSignature = useRef<string | null>(null);
+
   useEffect(() => {
     if (isFetching) return;
+    if (lastAnnouncedSignature.current === filterSignature) return;
+    lastAnnouncedSignature.current = filterSignature;
     /**
      * Announce the full match count, not the per-page slice. The visible
      * bottom-of-page counter uses `total` for the same reason: a filter
@@ -153,20 +186,7 @@ export function AuditLogTab() {
      * rendered on this page.
      */
     announce(localize('com_a11y_audit_filter_changed', { count: total }));
-  }, [
-    searchFilter.debouncedValue,
-    actionFilter,
-    dateFrom,
-    dateTo,
-    actorIdFilter.debouncedValue,
-    targetIdFilter.debouncedValue,
-    capabilityFilter.debouncedValue,
-    targetTypeFilter,
-    isFetching,
-    total,
-    announce,
-    localize,
-  ]);
+  }, [filterSignature, isFetching, total, announce, localize]);
 
   const entryOnPage = useMemo(
     () => (entryId ? (pageEntries.find((e) => e.id === entryId) ?? null) : null),
@@ -243,10 +263,18 @@ export function AuditLogTab() {
     try {
       const { csv } = await exportAuditLogServerFn({ data: filters });
       downloadCsv(csv);
+    } catch {
+      /**
+       * Surface the failure to screen readers — without this branch the
+       * promise rejects unhandled and the only signal a sighted user gets
+       * is the export button toggling out of its loading state with no
+       * download arriving. Mirrors `com_a11y_copy_failed` for copy paths.
+       */
+      announce(localize('com_a11y_audit_export_failed'));
     } finally {
       setExporting(false);
     }
-  }, [filters]);
+  }, [filters, announce, localize]);
 
   const showLoading = isPending && !data;
   const exportLabel = localize('com_audit_export_server');
