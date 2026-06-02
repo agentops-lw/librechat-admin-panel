@@ -146,7 +146,13 @@ export function AuditLogTab() {
 
   useEffect(() => {
     if (isFetching) return;
-    announce(localize('com_a11y_audit_filter_changed', { count: pageEntries.length }));
+    /**
+     * Announce the full match count, not the per-page slice. The visible
+     * bottom-of-page counter uses `total` for the same reason: a filter
+     * that matches 200 rows should announce 200, not the 50 currently
+     * rendered on this page.
+     */
+    announce(localize('com_a11y_audit_filter_changed', { count: total }));
   }, [
     searchFilter.debouncedValue,
     actionFilter,
@@ -157,7 +163,7 @@ export function AuditLogTab() {
     capabilityFilter.debouncedValue,
     targetTypeFilter,
     isFetching,
-    pageEntries.length,
+    total,
     announce,
     localize,
   ]);
